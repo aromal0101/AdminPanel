@@ -170,5 +170,5 @@ app.get('/admin/logout', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Admin panel running on port ${PORT}`);
+  console.log(`Admin panel running on http://localhost:${PORT}/admin`);
 });
