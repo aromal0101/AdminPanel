@@ -64,32 +64,34 @@ app.get('/admin/dashboard', async (req, res) => {
     // Test connection first
     await pool.query('SELECT 1');
     
-    // Then query your table
-    const { rows } = await pool.query('SELECT email, access_token FROM gtokens ORDER BY email');
-    res.render('admin_dashboard', { tokens: rows });
+    // Then query player data
+    const { rows } = await pool.query('SELECT players.email, player_xp.current_level, players.points, players.last_login FROM players INNER JOIN player_xp ON players.email = player_xp.email');
+    res.render('admin_dashboard', { players: rows });
   } catch (err) {
     console.error('Database error:', err.message);
     res.status(500).send(`Database error: ${err.message}`);
   }
 });
 
-// New route for downloading token data as Excel file
+// New route for downloading player data as Excel file
 app.get('/admin/download/excel', async (req, res) => {
   if (!req.session.adminLoggedIn) {
     return res.redirect('/admin');
   }
 
   try {
-    const { rows } = await pool.query('SELECT email, access_token FROM gtokens ORDER BY email');
+    const { rows } = await pool.query('SELECT players.email, player_xp.current_level, players.points, players.last_login FROM players INNER JOIN player_xp ON players.email = player_xp.email');
     
     // Create a new Excel workbook
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Google Tokens');
+    const worksheet = workbook.addWorksheet('Player Data');
     
     // Add columns
     worksheet.columns = [
       { header: 'Email', key: 'email', width: 30 },
-      { header: 'Access Token', key: 'access_token', width: 60 }
+      { header: 'Level', key: 'current_level', width: 15 },
+      { header: 'Points', key: 'points', width: 15 },
+      { header: 'Last Login', key: 'last_login', width: 25 }
     ];
     
     // Add style to header row
@@ -107,12 +109,12 @@ app.get('/admin/download/excel', async (req, res) => {
     // Auto filter
     worksheet.autoFilter = {
       from: { row: 1, column: 1 },
-      to: { row: rows.length + 1, column: 2 }
+      to: { row: rows.length + 1, column: 4 }
     };
     
     // Set content type and disposition
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=google_tokens.xlsx');
+    res.setHeader('Content-Disposition', 'attachment; filename=player_data.xlsx');
     
     // Write workbook to response
     await workbook.xlsx.write(res);
@@ -124,22 +126,22 @@ app.get('/admin/download/excel', async (req, res) => {
   }
 });
 
-// Keep existing CSV and JSON routes if needed
+// Updated CSV route
 app.get('/admin/download/csv', async (req, res) => {
   if (!req.session.adminLoggedIn) {
     return res.redirect('/admin');
   }
 
   try {
-    const { rows } = await pool.query('SELECT email, access_token FROM gtokens ORDER BY email');
+    const { rows } = await pool.query('SELECT players.email, player_xp.current_level, players.points, players.last_login FROM players INNER JOIN player_xp ON players.email = player_xp.email');
     
     // Convert to CSV
-    const fields = ['email', 'access_token'];
+    const fields = ['email', 'current_level', 'points', 'last_login'];
     const json2csvParser = new json2csv({ fields });
     const csvData = json2csvParser.parse(rows);
     
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=google_tokens.csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=player_data.csv');
     res.status(200).end(csvData);
   } catch (err) {
     console.error('Download error:', err.message);
@@ -147,16 +149,17 @@ app.get('/admin/download/csv', async (req, res) => {
   }
 });
 
+// Updated JSON route
 app.get('/admin/download/json', async (req, res) => {
   if (!req.session.adminLoggedIn) {
     return res.redirect('/admin');
   }
 
   try {
-    const { rows } = await pool.query('SELECT email, access_token FROM gtokens ORDER BY email');
+    const { rows } = await pool.query('SELECT players.email, player_xp.current_level, players.points, players.last_login FROM players INNER JOIN player_xp ON players.email = player_xp.email');
     
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename=google_tokens.json');
+    res.setHeader('Content-Disposition', 'attachment; filename=player_data.json');
     res.status(200).json(rows);
   } catch (err) {
     console.error('Download error:', err.message);
